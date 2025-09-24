@@ -1,33 +1,21 @@
+version: "3"
+
 volumes:
   ckan_storage:
   pg_data:
   solr_data:
-  pip_cache:
-  site_packages:
 
 services:
-
-  nginx:
-    build:
-      context: nginx/
-      dockerfile: Dockerfile
-    networks:
-      - webnet
-      - ckannet
-    depends_on:
-      ckan:
-        condition: service_healthy
-    ports:
-      - "0.0.0.0:${NGINX_SSLPORT_HOST}:${NGINX_SSLPORT}"
     
-  ckan:
+  ckan-xloader:
+    container_name: ${XLOADER_CONTAINER_NAME}
     build:
-      context: ckan/
+      context: xloader/
       dockerfile: Dockerfile
       args:
         - TZ=${TZ}
     networks:
-      - ckannet
+      - xloadernet
       - dbnet
       - solrnet
       - redisnet
@@ -42,28 +30,14 @@ services:
         condition: service_healthy
     volumes:
       - ckan_storage:/var/lib/ckan
-      - pip_cache:/root/.cache/pip
-      - site_packages:/usr/lib/python3.10/site-packages
+    ports:
+      - "0.0.0.0:${XLOADER_PORT_HOST}:${XLOADER_PORT}"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:5000/api/action/status_show"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
-    
-  datapusher:
-    networks:
-      - ckannet
-      - dbnet
-    image: ckan/ckan-base-datapusher:${DATAPUSHER_VERSION}
-    restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8800"]
-      interval: 60s
-      timeout: 10s
-      retries: 3
+      test: ["CMD", "wget", "-qO", "/dev/null", "http://xloader:5000"]
 
   db:
+    container_name: ${POSTGRESQL_CONTAINER_NAME}
     build:
       context: postgresql/
     networks:
@@ -72,6 +46,7 @@ services:
       - POSTGRES_USER
       - POSTGRES_PASSWORD
       - POSTGRES_DB
+      - PGDATA
       - CKAN_DB_USER
       - CKAN_DB_PASSWORD
       - CKAN_DB
@@ -85,6 +60,7 @@ services:
       test: ["CMD", "pg_isready", "-U", "${POSTGRES_USER}", "-d", "${POSTGRES_DB}"]
      
   solr:
+    container_name: ${SOLR_CONTAINER_NAME}
     networks:
       - solrnet
     image: ckan/ckan-solr:${SOLR_IMAGE_VERSION}
@@ -95,6 +71,7 @@ services:
       test: ["CMD", "wget", "-qO", "/dev/null", "http://localhost:8983/solr/"]
 
   redis:
+    container_name: ${REDIS_CONTAINER_NAME}
     image: redis:${REDIS_VERSION}
     networks:
       - redisnet
@@ -103,8 +80,7 @@ services:
       test: ["CMD", "redis-cli", "-e", "QUIT"]
     
 networks:
-  webnet:
-  ckannet:
+  xloadernet:
   solrnet:
     internal: true
   dbnet:
