@@ -1,7 +1,8 @@
 FROM ckan/ckan-base-xloader:1.0.1
 
 RUN pip3 install -e 'git+https://github.com/keitaroinc/ckanext-c3charts.git@master#egg=ckanext-c3charts'
-RUN pip3 install -e 'git+https://github.com/handryanp/ckanext-temabaru@main#egg=ckanext-temabaru'
+#RUN pip3 install -e 'git+https://github.com/handryanp/ckanext-temabaru@main#egg=ckanext-temabaru'
+RUN pip3 install -e 'git+https://github.com/kickymaulana/ckanext-deliserdang@master#egg=ckanext-deliserdang'
 
 # Set up environment variables
 ENV APP_DIR=/srv/app
